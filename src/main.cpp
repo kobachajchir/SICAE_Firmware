@@ -1,33 +1,39 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <LiquidCrystal_I2C.h>
 #include <Firebase_ESP_Client.h>
 #include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
+#include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include "LittleFS.h"
-
+#include <LCDI2C_Multilingual.h>
+#include "Globals.h"
+#include "myByte.hpp"
+#include "LCDControl.hpp"
+#include "WebSockets.hpp"
+#include "Server.hpp"
+#include "ESP32_Utils.hpp"
+#include "ESP32_Utils_AWS.hpp"
+#include "Utils_FS.hpp"
+#include "API.hpp"
 // Proporciona la información del proceso de generación de tokens.
 #include "addons/TokenHelper.h"
 // Proporciona la información de impresión de la carga útil de RTDB y otras funciones auxiliares.
 #include "addons/RTDBHelper.h"
 
-// Inserta tus credenciales de red
-#define WIFI_SSID "Koba"
-#define WIFI_PASSWORD "koba1254"
-
-// Inserta la clave API del proyecto de Firebase
-#define API_KEY "AIzaSyAX0p4VIdtfN7I7dnaOGpBtfGAtlG3IqDY"
-
-// Inserta la URL de la base de datos de Firebase
-#define DATABASE_URL "https://sicaewebapp-default-rtdb.firebaseio.com/"
-
-// Inserta el correo electrónico autorizado y la contraseña correspondiente
-#define USER_EMAIL "koba@test.com"
-#define USER_PASSWORD "koba1254"
+// I2C (LCD Display)
+const uint8_t sdaPin = 21;
+const uint8_t sclPin = 22;
 
 // Define el objeto de datos de Firebase
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
+
+IPAddress ip(192, 168, 1, 1);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 // Variable para guardar el UID del usuario
 String uid;
@@ -37,138 +43,21 @@ String ssidAP = "ESP-AP-";
 String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
 String firmware = "0.1";
 
-// Definiciones de tiempo y bandera
-#define WIFI_WAIT_TIME 5000
-#define FIREBASE_UPDATE_TIME 30000
-
-typedef union {
-  struct {
-    uint8_t bit0 : 1;
-    uint8_t bit1 : 1;
-    uint8_t bit2 : 1;
-    uint8_t bit3 : 1;
-    uint8_t bit4 : 1;
-    uint8_t bit5 : 1;
-    uint8_t bit6 : 1;
-    uint8_t bit7 : 1;
-  } bits;
-  uint8_t byte;
-} myByte;
-
 myByte flag;
 
-#define APMODE flag.bits.bit0
-#define CONN_ESTABLISHED flag.bits.bit1
-#define WRITE_TO_FIREBASE flag.bits.bit2
-#define READ_FROM_FIREBASE flag.bits.bit3
-#define UPDATED flag.bits.bit4
-
+uint32_t lastTime = 0;
 uint32_t sendDataPrevMillis = 0;
+uint32_t timerLCD = 0;
 uint32_t connectionTimeCounter = 0;
+uint8_t lcdClearTimer = 0;
 bool signupOK = false;
 FirebaseJson content;
 FirebaseJsonData jsonData;
-
-// Crear objeto AsyncWebServer en el puerto 80
-AsyncWebServer server(80);
-
-// Crear objeto WebSocket
-AsyncWebSocket ws("/ws");
+uint16_t msCounter;
+uint16_t msCounterCount;
 
 // Declaraciones de funciones
-void initFS();
-void formatLittleFS();
-void initWebSocket();
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-void notifyClients(String message);
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
 void updateFirebaseEntry(FirebaseJson& content);
-void initWiFi();
-void checkWiFiConnection();
-
-void initFS() {
-  // Inicializar LittleFS
-  if (!LittleFS.begin()) {
-    Serial.println(F("An error has occurred while mounting LittleFS"));
-    formatLittleFS();
-  } else {
-    Serial.println(F("LittleFS mounted successfully"));
-  }
-}
-
-void formatLittleFS() {
-  Serial.println(F("Formatting LittleFS..."));
-  if (LittleFS.format()) {
-    Serial.println(F("LittleFS formatted successfully"));
-    if (LittleFS.begin()) {
-      Serial.println(F("LittleFS mounted successfully after formatting"));
-    } else {
-      Serial.println(F("Failed to mount LittleFS after formatting"));
-    }
-  } else {
-    Serial.println(F("Failed to format LittleFS"));
-  }
-}
-
-void initWebSocket() {
-  // Inicializar WebSocket
-  ws.onEvent(onEvent);
-  server.addHandler(&ws);
-  Serial.println("WebSockets started");
-}
-
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  switch (type) {
-    case WS_EVT_CONNECT:
-      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-      break;
-    case WS_EVT_DISCONNECT:
-      Serial.printf("WebSocket client #%u disconnected\n", client->id());
-      break;
-    case WS_EVT_DATA:
-      handleWebSocketMessage(arg, data, len);
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
-  }
-}
-
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
-  AwsFrameInfo *info = (AwsFrameInfo*)arg;
-  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-    // Aquí puedes manejar los mensajes recibidos por WebSocket
-  }
-}
-
-void notifyClients(String message) {
-  ws.textAll(message);
-}
-
-void initWiFi() {
-  connectionTimeCounter = millis();
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi ..");
-}
-
-void checkWiFiConnection() {
-  if (WiFi.status() != WL_CONNECTED && (millis() - connectionTimeCounter) >= WIFI_WAIT_TIME) {
-    APMODE = 1;
-    CONN_ESTABLISHED = 1;
-    Serial.println(F("\nNo se pudo conectar a Wi-Fi. Iniciando modo AP..."));
-    WiFi.softAP(ssidAP.c_str());
-    Serial.print(F("AP SSID: "));
-    Serial.println(ssidAP);
-    Serial.print(F("IP Address: "));
-    Serial.println(WiFi.softAPIP());
-  } else if (WiFi.status() == WL_CONNECTED) {
-    APMODE = 0;
-    CONN_ESTABLISHED = 1;
-    Serial.println(F("\nConectado a Wi-Fi."));
-    Serial.print(F("IP Address: "));
-    Serial.println(WiFi.localIP());
-  }
-}
 
 void updateFirebaseEntry(FirebaseJson& content) {
   Serial.print("Updating node at path: ");
@@ -189,12 +78,53 @@ void setup() {
   //Until here on top
   
   Serial.begin(115200);
-
-  // Inicializa LittleFS
+    // set up the LCD's number of rows and columns:
+      // Inicializa LittleFS
   initFS();
+  while(!Wire.begin(21, 22)){
 
-  // Inicializa WiFi
+  }
+  byte error, address;
+  int nDevices;
+  Serial.println("Scanning...");
+  nDevices = 0;
+  for(address = 1; address < 127; address++ ) {
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+    if (error == 0) {
+      Serial.print("I2C device found at address 0x");
+      if (address<16) {
+        Serial.print("0");
+      }
+      Serial.println(address,HEX);
+      nDevices++;
+    }
+    else if (error==4) {
+      Serial.print("Unknow error at address 0x");
+      if (address<16) {
+        Serial.print("0");
+      }
+      Serial.println(address,HEX);
+    }    
+  }
+  if (nDevices == 0) {
+    Serial.println("No I2C devices found\n");
+  }
+  else {
+    Serial.println("done\n");
+  }
+  delay(5000); 
+  LCD_ON = 1;
+  timerLCD = 0;
+  Serial.print("Iniciando LCD: ");
+  lcd.init();
+  lcd.backlight();
+  lcd.home();
+  strcpy(linea, "INICIANDO");
+  imprimirLCD(linea, 0);
   initWiFi();
+  lastTime = millis();
+  msCounter = 0;
 
   Serial.print("Chip ID:");
   Serial.println(chipId);
@@ -245,34 +175,33 @@ void setup() {
   uid = auth.token.uid.c_str();
   Serial.print("User UID: ");
   Serial.println(uid);
-
-  // Configurar rutas del servidor después de determinar el estado de APMODE
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (APMODE) {
-      request->send(LittleFS, "/indexAP.html", F("text/html"));
-    } else {
-      request->send(LittleFS, "/index.html", F("text/html"));
-    }
-  });
-
-  // Ruta para el archivo JavaScript bundle
-  server.on("/bundle.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/bundle.js", "application/javascript");
-  });
-
-  server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(LittleFS, "/styles.css", "text/css");
-  });
-
-  server.serveStatic("/", LittleFS, "/");
-
-  server.begin();
-  Serial.print("Server started");
-  initWebSocket();
+  InitServer();
+	InitWebSockets();
   READ_FROM_FIREBASE = 1;
 }
 
 void loop() {
+  if((millis()-lastTime) > MINMSTIME){
+    lastTime = millis();
+    if(LCD_ON){
+      if(timerLCD <= LCD_ON_TIME){
+        timerLCD++;
+      }else{
+        timerLCD = LCD_ON_TIME;
+        LCD_ON = 0;
+        lcd.noBacklight();
+      }
+    }
+    if(LCDWILLCLEAR){
+      if(lcdClearTimer >= LCDCLEARTIME){
+        lcdClearTimer++;
+      }else{
+        lcdClearTimer = 0;
+        lcd.clear();
+        LCDWILLCLEAR = 0;
+      }
+    }
+  }
   if(Firebase.ready()){
     if((millis() - sendDataPrevMillis)>FIREBASE_UPDATE_TIME) { //Every 30sec TEST ONLY
       WRITE_TO_FIREBASE = 1;
@@ -359,6 +288,8 @@ void loop() {
     if(WRITE_TO_FIREBASE){
       WRITE_TO_FIREBASE = 0;
       sendDataPrevMillis = millis();
+      strcpy(linea, "Subiendo data");
+      imprimirLCD(linea, 0);
       if (Firebase.RTDB.set(&fbdo, path.c_str(), &content)) {
         Serial.println("Initial data sent to Firebase");
         UPDATED = 1;
