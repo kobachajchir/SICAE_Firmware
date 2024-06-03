@@ -3,7 +3,27 @@
 
 void sendJsonDocument(const String& output);
 
-uint8_t cmd_codes[] = {160, 161, 177, 193, 194, 195, 196, 197, 209, 210, 211, 212, 225, 241, 242, 243, 244, 245};
+uint8_t cmd_codes[] = {
+  160, // 0xA0 - Prueba LCD
+  161, // 0xA1 - Prueba Botones
+  162, // 0xA2 - Prueba Sensor de Luz
+  163, // 0xA3 - Prueba Sensor IR
+  164, // 0xA4 - Prueba Transmisión IR
+  240, // 0xF0 - Obtener Firmware
+  241, // 0xF1 - Obtener Estado
+  242, // 0xF2 - Obtener Hora Actual
+  243, // 0xF3 - Establecer Hora Actual
+  244, // 0xF4 - Establecer Datos
+  245, // 0xF5 - Establecer Datos de Conexión
+  246, // 0xF6 - Establecer Datos de Autenticación
+  247, // 0xF7 - Autenticar
+  224, // 0xE0 - Error: General
+  225, // 0xE1 - Error: Conexión
+  226, // 0xE2 - Error: Autenticación
+  227, // 0xE3 - Error: Datos
+  208, // 0xD0 - ESP Pide Datos
+  209  // 0xD1 - ESP Pide Hora Actual
+};
 const int num_codes = sizeof(cmd_codes) / sizeof(cmd_codes[0]); // Calculate the number of elements in the array
 
 bool isCommandValid(uint8_t cmd) {
@@ -40,6 +60,81 @@ uint8_t calculateLen(JsonObjectConst obj) {
   return len;
 }
 
+void launchCommand(uint8_t cmd, JsonObjectConst obj) {
+    switch (cmd) {
+      case 160: // 0xA0 Prueba LCD
+          // Código para prueba LCD
+          break;
+      case 161: // 0xA1 Prueba Botones
+          // Código para prueba Botones
+          break;
+      case 162: // 0xA2 Prueba Sensor de Luz
+          // Código para prueba Sensor de Luz
+          break;
+      case 163: // 0xA3 Prueba Sensor IR
+          // Código para prueba Sensor IR
+          break;
+      case 164: // 0xA4 Prueba Transmisión IR
+          // Código para prueba Transmisión IR
+          break;
+      case 208: // 0xD0 ESP Pide Datos
+          // Código para ESP Pide Datos
+          break;
+      case 209: // 0xD1 ESP Pide Hora Actual
+          // Código para ESP Pide Hora Actual
+          break;
+      case 224: // 0xE0 Error: General
+          // Código para Error General
+          break;
+      case 225: // 0xE1 Error: Conexión
+          // Código para Error Conexión
+          break;
+      case 226: // 0xE2 Error: Autenticación
+          // Código para Error Autenticación
+          break;
+      case 227: // 0xE3 Error: Datos
+          // Código para Error Datos
+          break;
+      case 240: // 0xF0 Obtener Firmware
+          // Código para Obtener Firmware
+          break;
+      case 241: // 0xF1 Obtener Estado
+          // Código para Obtener Estado
+          break;
+      case 242: // 0xF2 Obtener Hora Actual
+          // Código para Obtener Hora Actual
+          break;
+      case 243: // 0xF3 Establecer Hora Actual
+          // Código para Establecer Hora Actual
+          break;
+      case 244: // 0xF4 Establecer Datos
+          // Código para Establecer Datos
+          break;
+      case 245: // 0xF5 Establecer Datos de Conexión
+          // Código para Establecer Datos de Conexión
+          break;
+      case 246: // 0xF6 Establecer Datos de Autenticación
+          // Código para Establecer Datos de Autenticación
+          break;
+      case 247: // 0xF7 Autenticar
+          // Código para Autenticar
+          break;
+    }
+}
+
+void processCommand(uint8_t cmd, JsonObjectConst doc) {
+  uint8_t len = doc["len"];  // Extract length from JSON
+  uint8_t receivedChecksum = doc["cks"];  // Extract checksum from JSON
+  uint8_t calculatedChecksum = calculateChecksum(doc, len);  // Calculate checksum based on JSON payload
+
+  if (receivedChecksum == calculatedChecksum) {
+    Serial.println("Checksum validation passed");
+    launchCommand(cmd, doc);  // Your function to launch the command
+  } else {
+    Serial.println("Checksum validation failed");
+  }
+}
+
 /*
 void case160Handler() { 
   DynamicJsonDocument doc(128);
@@ -55,67 +150,3 @@ void case160Handler() {
   sendJsonDocument(output);
 }
 */
-
-void launchCommand(uint8_t cmd, JsonObjectConst obj) {
-    switch (cmd) {
-      case 160: // 0xA0 GetAliveStatus
-          break;
-      case 161: // 0xA1 GetBoardInfo
-          break;
-      case 177: // 0xB1 MakeZeroWheels
-          // Your code here
-          break;
-      case 193: // 0xC1 GoForward
-          break;
-      case 194: // 0xC2 GoBackwards
-          break;
-      case 195: // 0xC3 TurnCW
-          // Your code here
-          break;
-      case 196: // 0xC4 TurnCCW
-          // Your code here
-          break;
-      case 197: // 0xC5 LightsChange
-          // Your code here
-          break;
-      case 209: // 0xD1 OdometryRefreshTimeChange
-          // Your code here
-          break;
-      case 210: // 0xD2 WifiChange
-          // Your code here
-          break;
-      case 211: // 0xD3 MPUReading
-          // Your code here
-          break;
-      case 212: // 0xD4 ConfigData
-        break;
-      case 225: // 0xE1 ErrorWifiConn
-          break;
-      case 241: // 0xF1 TestMotores
-
-          break;
-      case 242: // 0xF2 TestEncoders
-
-          break;
-      case 243: // 0xF3 TestServo
-          break;
-      case 244: // 0xF4 TestInfrarojos
-          
-          break;
-      case 245: // 0xF5 TestUltrasonido
-          break;
-      }
-}
-
-void processCommand(uint8_t cmd, JsonObjectConst doc) {
-  uint8_t len = doc["len"];  // Extract length from JSON
-  uint8_t receivedChecksum = doc["cks"];  // Extract checksum from JSON
-  uint8_t calculatedChecksum = calculateChecksum(doc, len);  // Calculate checksum based on JSON payload
-
-  if (receivedChecksum == calculatedChecksum) {
-    Serial.println("Checksum validation passed");
-    launchCommand(cmd, doc);  // Your function to launch the command
-  } else {
-    Serial.println("Checksum validation failed");
-  }
-}

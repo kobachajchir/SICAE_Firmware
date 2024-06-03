@@ -136,6 +136,8 @@ void setup() {
   pinMode(PIN_BTN_ENTER, INPUT);
   pinMode(PIN_BTN_UP, INPUT);
   pinMode(PIN_BTN_DOWN, INPUT);
+  pinMode(PIN_RELE_UNO, OUTPUT);
+  digitalWrite(PIN_RELE_UNO, LOW);
   Serial.begin(115200);
     // set up the LCD's number of rows and columns:
       // Inicializa LittleFS
@@ -288,6 +290,7 @@ void loop() {
         if((millis() - btnEnterDuration) >= BTN_PRESS_TIME){
           Serial.print("Btn enter detected");
           BTN_ENTER_RELEASED = 1;
+          CHANGE_RELE_STATE = 1;
         }else{
           BTN_ENTER_PRESSED = 0;
           BTN_ENTER_RELEASED = 0;
@@ -427,6 +430,13 @@ void loop() {
   if (Firebase.isTokenExpired()) {
     Firebase.refreshToken(&config);
     Serial.println("Refresh token");
+  }
+
+  if(CHANGE_RELE_STATE){
+    CHANGE_RELE_STATE = 0;
+    digitalWrite(PIN_RELE_UNO, !digitalRead(PIN_RELE_UNO));
+    Serial.print("Rele: ");
+    Serial.println(digitalRead(PIN_RELE_UNO) ? "ON" : "OFF");
   }
 
   ws.cleanupClients();

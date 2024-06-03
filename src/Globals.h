@@ -16,6 +16,7 @@
 #define PIN_BTN_ENTER 39
 #define PIN_BTN_UP 34
 #define PIN_BTN_DOWN 35
+#define PIN_RELE_UNO 23
 
 #define APMODE flag.bits.bit0
 #define CONN_ESTABLISHED flag.bits.bit1
@@ -24,6 +25,7 @@
 #define UPDATED flag.bits.bit4
 #define LCD_ON flag.bits.bit5
 #define LCDWILLCLEAR flag.bits.bit6
+#define CHANGE_RELE_STATE flag.bits.bit7
 
 #define BTN_UP_PRESSED btnFlag.bits.bit0 //Button Up pressed
 #define BTN_UP_RELEASED btnFlag.bits.bit1 //Button Up released
