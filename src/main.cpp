@@ -6,7 +6,8 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
-#include "LittleFS.h"
+#include "FS.h"
+#include <LittleFS.h>
 #include <LCDI2C_Multilingual.h>
 #include "Globals.h"
 #include "myByte.hpp"
@@ -39,9 +40,16 @@ IPAddress subnet(255, 255, 255, 0);
 String uid;
 // Variable para guardar el chip ID
 String path = "/dispositivos/";
-String ssidAP = "ESP-AP-";
 String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
 String firmware = "0.1";
+String ssidAP;
+String apPassword;
+String wifiSsid;
+String wifiPassword;
+String apiKey;
+String databaseUrl;
+String userEmail;
+String userPassword;
 
 myByte flag;
 
@@ -58,6 +66,7 @@ uint16_t msCounterCount;
 
 // Declaraciones de funciones
 void updateFirebaseEntry(FirebaseJson& content);
+void readConfigFile();
 
 void updateFirebaseEntry(FirebaseJson& content) {
   Serial.print("Updating node at path: ");
@@ -71,6 +80,43 @@ void updateFirebaseEntry(FirebaseJson& content) {
   }
 }
 
+void readConfigFile() {
+  String fileContent = readFile(LittleFS, "/config.txt");
+      Serial.println("File Content:");
+    Serial.println(fileContent);
+  if (fileContent.length() > 0) {
+    DynamicJsonDocument doc(2048);
+    DeserializationError error = deserializeJson(doc, fileContent);
+    if (error) {
+      Serial.println("Failed to parse config file");
+      return;
+    }
+    // Asignar valores a las variables globales
+    wifiSsid = doc["ssid"].as<String>();
+    wifiPassword = doc["password"].as<String>();
+    ssidAP = doc["apSsid"].as<String>();
+    apPassword = doc["apPassword"].as<String>();  // Esto no se usa en el código actual
+    userEmail = doc["userEmail"].as<String>();
+    userPassword = doc["userPassword"].as<String>();
+    databaseUrl = doc["databaseUrl"].as<String>();
+    apiKey = doc["appKey"].as<String>();
+    Serial.print("WiFi SSID: ");
+    Serial.println(wifiSsid);
+    Serial.print("WiFi Password: ");
+    Serial.println(wifiPassword);
+    Serial.print("API Key: ");
+    Serial.println(apiKey);
+    Serial.print("Database URL: ");
+    Serial.println(databaseUrl);
+    Serial.print("User Email: ");
+    Serial.println(userEmail);
+    Serial.print("User Password: ");
+    Serial.println(userPassword);
+  } else {
+    Serial.println("Config file is empty or not found");
+  }
+}
+
 void setup() {
   //Keep these comment and line on top of setup
   ssidAP.concat(chipId);
@@ -81,39 +127,48 @@ void setup() {
     // set up the LCD's number of rows and columns:
       // Inicializa LittleFS
   initFS();
+  bool fileexists = LittleFS.exists("/config.txt");
+  if (!fileexists) {
+    Serial.println("File doesn’t exist");
+    Serial.println("Creating file...");
+
+    // Crear objeto JSON
+    DynamicJsonDocument doc(2048);  // Aumentar el tamaño del documento JSON
+
+    doc["ssid"] = "Koba";
+    doc["password"] = "koba1254";
+    doc["apSsid"] = "ESP-AP-9c842178";
+    doc["apPassword"] = "esp1234";
+    doc["userEmail"] = "koba@test.com";
+    doc["userPassword"] = "koba1254";
+    doc["databaseUrl"] = "https://sicaewebapp-default-rtdb.firebaseio.com/";
+    doc["appKey"] = "AIzaSyAX0p4VIdtfN7I7dnaOGpBtfGAtlG3IqDY";
+
+    // Añadir datos adicionales en la estructura requerida
+    JsonObject data0 = doc.createNestedObject("data[0]");
+    data0["deviceType"] = "";
+    data0["icon"] = "";
+    JsonObject irData = data0.createNestedObject("irData");
+    irData["down"] = "";
+    irData["power"] = "";
+    irData["up"] = "";
+    data0["model"] = "";
+    data0["name"] = "";
+    data0["state"] = false;
+
+    // Convertir JSON a cadena
+    String jsonString;
+    serializeJson(doc, jsonString);
+    // Escribir JSON en el archivo
+    writeFile(LittleFS, "/config.txt", jsonString.c_str());
+  } else {
+    Serial.println("File already exists");
+    // Leer el contenido del archivo
+    readConfigFile();
+  }
   while(!Wire.begin(21, 22)){
 
   }
-  byte error, address;
-  int nDevices;
-  Serial.println("Scanning...");
-  nDevices = 0;
-  for(address = 1; address < 127; address++ ) {
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-    if (error == 0) {
-      Serial.print("I2C device found at address 0x");
-      if (address<16) {
-        Serial.print("0");
-      }
-      Serial.println(address,HEX);
-      nDevices++;
-    }
-    else if (error==4) {
-      Serial.print("Unknow error at address 0x");
-      if (address<16) {
-        Serial.print("0");
-      }
-      Serial.println(address,HEX);
-    }    
-  }
-  if (nDevices == 0) {
-    Serial.println("No I2C devices found\n");
-  }
-  else {
-    Serial.println("done\n");
-  }
-  delay(5000); 
   LCD_ON = 1;
   timerLCD = 0;
   Serial.print("Iniciando LCD: ");
@@ -290,6 +345,8 @@ void loop() {
       sendDataPrevMillis = millis();
       strcpy(linea, "Subiendo data");
       imprimirLCD(linea, 0);
+      strcpy(linea, "");
+      imprimirLCD(linea, 1);
       if (Firebase.RTDB.set(&fbdo, path.c_str(), &content)) {
         Serial.println("Initial data sent to Firebase");
         UPDATED = 1;

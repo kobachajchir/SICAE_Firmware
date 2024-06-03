@@ -1,21 +1,7 @@
 #pragma once
 #include <WiFi.h>
 #include "myByte.hpp"
-#include <LiquidCrystal_I2C.h>  
-
-// Inserta tus credenciales de red
-#define WIFI_SSID "Koba"
-#define WIFI_PASSWORD "koba1254"
-
-// Inserta la clave API del proyecto de Firebase
-#define API_KEY "AIzaSyAX0p4VIdtfN7I7dnaOGpBtfGAtlG3IqDY"
-
-// Inserta la URL de la base de datos de Firebase
-#define DATABASE_URL "https://sicaewebapp-default-rtdb.firebaseio.com/"
-
-// Inserta el correo electrónico autorizado y la contraseña correspondiente
-#define USER_EMAIL "koba@test.com"
-#define USER_PASSWORD "koba1254"
+#include <LiquidCrystal_I2C.h>
 
 // Definiciones de tiempo y bandera
 #define MINMSTIME 10
@@ -42,4 +28,27 @@ extern uint32_t sendDataPrevMillis;
 extern String ssidAP;
 extern uint32_t connectionTimeCounter;
 extern uint8_t lcdClearTimer;
+extern String ssidAP;
+extern String apPassword;
+extern String wifiSsid;
+extern String wifiPassword;
+extern String apiKey;
+extern String databaseUrl;
+extern String userEmail;
+extern String userPassword;
 
+// Inserta tus credenciales de red
+#define WIFI_SSID wifiSsid
+#define WIFI_PASSWORD wifiPassword
+#define AP_SSID ssidAP
+#define AP_PASSWORD apPassword
+
+// Inserta la clave API del proyecto de Firebase
+#define API_KEY apiKey
+
+// Inserta la URL de la base de datos de Firebase
+#define DATABASE_URL databaseUrl
+
+// Inserta el correo electrónico autorizado y la contraseña correspondiente
+#define USER_EMAIL userEmail
+#define USER_PASSWORD userPassword
