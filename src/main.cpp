@@ -65,6 +65,12 @@ FirebaseJson content;
 FirebaseJsonData jsonData;
 uint16_t msCounter;
 uint16_t msCounterCount;
+uint8_t btnEnterStatus = 0;
+uint8_t btnUpStatus = 0;
+uint8_t btnDownStatus = 0;
+uint32_t btnEnterDuration = 0;
+uint32_t btnUpDuration = 0;
+uint32_t btnDownDuration = 0;
 
 // Declaraciones de funciones
 void updateFirebaseEntry(FirebaseJson& content);
@@ -124,7 +130,12 @@ void setup() {
   ssidAP.concat(chipId);
   path.concat(chipId);
   //Until here on top
-  
+  BTN_ENTER_RELEASED = 1;
+  BTN_UP_RELEASED = 1;
+  BTN_DOWN_RELEASED = 1;
+  pinMode(PIN_BTN_ENTER, INPUT);
+  pinMode(PIN_BTN_UP, INPUT);
+  pinMode(PIN_BTN_DOWN, INPUT);
   Serial.begin(115200);
     // set up the LCD's number of rows and columns:
       // Inicializa LittleFS
@@ -263,6 +274,54 @@ void loop() {
         lcd.clear();
         LCDWILLCLEAR = 0;
       }
+    }
+    btnEnterStatus = digitalRead(PIN_BTN_ENTER);
+    btnUpStatus = digitalRead(PIN_BTN_UP);
+    btnDownStatus = digitalRead(PIN_BTN_DOWN);
+    //BTN ENTER
+    if(btnEnterStatus == HIGH && !BTN_ENTER_PRESSED){
+        BTN_ENTER_PRESSED = 1;
+        btnEnterDuration = millis();
+    }
+    if(btnEnterStatus == LOW && BTN_ENTER_PRESSED){
+        BTN_ENTER_PRESSED = 0;
+        if((millis() - btnEnterDuration) >= BTN_PRESS_TIME){
+          Serial.print("Btn enter detected");
+          BTN_ENTER_RELEASED = 1;
+        }else{
+          BTN_ENTER_PRESSED = 0;
+          BTN_ENTER_RELEASED = 0;
+        }
+    }
+    //BTN UP
+    if(btnUpStatus == HIGH && !BTN_UP_PRESSED){
+        BTN_UP_PRESSED = 1;
+        btnUpDuration = millis();
+    }
+    if(btnUpStatus == LOW && BTN_UP_PRESSED){
+        BTN_UP_PRESSED = 0;
+        if((millis() - btnUpDuration) >= BTN_PRESS_TIME){
+          Serial.print("Btn up detected");
+          BTN_UP_RELEASED = 1;
+        }else{
+          BTN_UP_PRESSED = 0;
+          BTN_UP_RELEASED = 0;
+        }
+    }
+    //BTN DOWN
+    if(btnDownStatus == HIGH && !BTN_DOWN_PRESSED){
+        BTN_DOWN_PRESSED = 1;
+        btnDownDuration = millis();
+    }
+    if(btnDownStatus == LOW && BTN_DOWN_PRESSED){
+        BTN_DOWN_PRESSED = 0;
+        if((millis() - btnDownDuration) >= BTN_PRESS_TIME){
+          Serial.print("Btn down detected");
+          BTN_DOWN_RELEASED = 1;
+        }else{
+          BTN_DOWN_PRESSED = 0;
+          BTN_DOWN_RELEASED = 0;
+        }
     }
   }
   if(Firebase.ready()){
