@@ -18,6 +18,7 @@
 #include "ESP32_Utils_AWS.hpp"
 #include "Utils_FS.hpp"
 #include "API.hpp"
+#include <IRremote.hpp>
 // Proporciona la información del proceso de generación de tokens.
 #include "addons/TokenHelper.h"
 // Proporciona la información de impresión de la carga útil de RTDB y otras funciones auxiliares.
@@ -52,6 +53,7 @@ String userEmail;
 String userPassword;
 
 myByte flag;
+myByte btnFlag;
 
 uint32_t lastTime = 0;
 uint32_t sendDataPrevMillis = 0;
@@ -233,9 +235,15 @@ void setup() {
   InitServer();
 	InitWebSockets();
   READ_FROM_FIREBASE = 1;
+  IrReceiver.begin(PIN_IR_RECEIVER, ENABLE_LED_FEEDBACK);
 }
 
 void loop() {
+  if(IrReceiver.decode()){
+    Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+    IrReceiver.printIRResultShort(&Serial);
+    IrReceiver.resume();
+  }
   if((millis()-lastTime) > MINMSTIME){
     lastTime = millis();
     if(LCD_ON){
