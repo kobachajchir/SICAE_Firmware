@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "ES6",
     "allowJs": true,
     "jsx": "react",
     "moduleResolution": "node",
-    "outDir": "./data",
+    "outDir": "./../data",
     "strict": true,
     "esModuleInterop": true
   },
-  "include": ["reactApp/**/*"]
+  "include": ["./**/*"]
 }

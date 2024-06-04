@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../hooks/ThemeContext";
-//@ts-ignore
-import { MaterialCommunityIcons } from "react-web-vector-icons";
 import { IconType } from "../types/IconTypes";
 import { useUser } from "../hooks/UserContext";
+import { MdAccountCircle } from "react-icons/md";
 
 function Login() {
   const [loaded, setLoaded] = useState<boolean>(false);
@@ -79,11 +78,10 @@ function Login() {
               {" "}
               Iniciar sesion
             </p>
-            <MaterialCommunityIcons
-              name={IconType.Next}
-              color={selectThemeClass("#000", "#fff")}
-              size={40}
-            ></MaterialCommunityIcons>
+            <MdAccountCircle
+              fill={selectThemeClass("#000", "#fff")}
+              fontSize={20}
+            ></MdAccountCircle>
           </button>
         </div>
       </div>

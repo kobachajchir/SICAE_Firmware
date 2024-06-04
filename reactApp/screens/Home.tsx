@@ -3,42 +3,50 @@ import { useTheme } from "../hooks/ThemeContext";
 import { ConnectionInfo } from "../types/APITypes";
 import { useNavigate } from "react-router-dom";
 import GoToButton from "../components/GoToButton";
-import { IconType } from "../types/IconTypes";
-//@ts-ignore
-import { MaterialCommunityIcons } from "react-web-vector-icons";
-import { useWebSocket } from "../hooks/WebSocketContext";
+import { MdRestore, MdSave, MdSettings, MdWifi, MdWifiTethering } from "react-icons/md";
+import { fetchConnectionInfo, updateConnectionData } from "../tools/api";
 
 function Home() {
-  const [connectionInfo, setconnectionInfo] = useState<ConnectionInfo | null>(null);
+  const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [loaded, setLoaded] = useState<boolean>(false);
   const { selectThemeClass } = useTheme();
   const navigate = useNavigate();
-  const websocketRepo = useWebSocket();
 
   async function getConnectionInfo() {
-    console.log("get connection info");
-    websocketRepo.setOnMessageCallback((event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      setconnectionInfo(data);
-    });
-    websocketRepo.sendMessage('fetchConnectionInfo'); // Enviar el mensaje para obtener la información de conexión
+    try {
+      const data = await fetchConnectionInfo();
+      setConnectionInfo(data);
+    } catch (error) {
+      console.error("Error fetching connection info:", error);
+    }
+  }
+
+  async function saveConnectionInfo() {
+    console.log("saveConnectionInfo")
+    if (connectionInfo) {
+      try {
+        await updateConnectionData(connectionInfo);
+        console.log("Connection info updated successfully");
+      } catch (error) {
+        console.error("Error updating connection info:", error);
+      }
+    }
+  }
+
+  function handleRestore() {
+    console.log("handleRestore")
+    getConnectionInfo();
   }
 
   useEffect(() => {
-    // Call API to get connection Info
-    getConnectionInfo();
   }, []);
-
+/*
   useEffect(() => {
     if (connectionInfo) {
       setLoaded(true);
     }
   }, [connectionInfo]);
-
-  /*if (!loaded) {
-    return <div>Loading...</div>;
-  }*/
-
+*/
   function handleGoToSettings() {
     navigate("/settings");
   }
@@ -82,19 +90,24 @@ function Home() {
               "bg-gray-100",
               "bg-gray-900"
             )}`}
-            >
-              <MaterialCommunityIcons
-                name={IconType.Router}
-                color={selectThemeClass("#000", "#fff")}
-                size={150}
-              ></MaterialCommunityIcons>
+          >
+            {connectionInfo?.apMode === true ?
+              <MdWifiTethering
+                fill={selectThemeClass("#000", "#fff")}
+                size={120}
+                style={{margin: 30}}
+                ></MdWifiTethering> : <MdWifi
+                fill={selectThemeClass("#000", "#fff")}
+                size={120}
+                style={{margin: 30}}
+            ></MdWifi>}
               <p
               className={`${selectThemeClass(
                 "text-black",
                 "text-white"
               )} text-2xl font-bold text-center -mt-10 mb-4`}
               >
-              {`La placa esta en modo ${connectionInfo?.apMode ? "Wifi" : "AP"}`}
+              {`La placa esta en modo ${connectionInfo?.apMode === true ? "AP" : "WIFI"}`}
               </p>
               <div className="flex flex-col items-center justify-center my-2">
                 <div className="flex flex-row items-center justify-center">
@@ -104,8 +117,24 @@ function Home() {
                     "text-white"
                   )} text-2xl font-bold text-center`}
                   >
-                  Wifi SSID: 
-                  </label>
+                  WIFI SSID: 
+                </label>
+                <input
+                  className={`${selectThemeClass(
+                    "bg-gray-300 text-black",
+                    "bg-gray-700 text-white"
+                  )} rounded-xl ml-2 text-center`}
+                  type="text"
+                  name="wifiSsid"
+                  id="wifiSsid"
+                  value={connectionInfo?.wifiSsid || ""}
+                  onChange={(e) => {
+                    if (connectionInfo) {
+                      setConnectionInfo({ ...connectionInfo, wifiSsid: e.target.value })
+                    }
+                    } 
+                  }
+                />
                 </div>
                 <div className="flex flex-row items-center justify-center">
                   <label
@@ -115,7 +144,23 @@ function Home() {
                     )} text-2xl font-bold text-center`}
                     >
                     WIFI Password: 
-                  </label>
+                </label>
+                <input
+                  className={`${selectThemeClass(
+                    "bg-gray-300 text-black",
+                    "bg-gray-700 text-white"
+                  )} rounded-xl ml-2 text-center`}
+                  type="text"
+                  name="wifiPassword"
+                  id="wifiPassword"
+                  value={connectionInfo?.wifiPassword || ""}
+                  onChange={(e) => {
+                    if (connectionInfo) {
+                      setConnectionInfo({ ...connectionInfo, wifiPassword: e.target.value })
+                    }
+                    } 
+                  }
+                />
                 </div>
               </div>
               <div className="flex flex-col items-center justify-center my-2">
@@ -127,7 +172,23 @@ function Home() {
                   )} text-2xl font-bold text-center`}
                   >
                   AP SSID: 
-                  </label>
+                </label>
+                <input
+                  className={`${selectThemeClass(
+                    "bg-gray-300 text-black",
+                    "bg-gray-700 text-white"
+                  )} rounded-xl ml-2 text-center`}
+                  type="text"
+                  name="apSsid"
+                  id="apSsid"
+                  value={connectionInfo?.apSsid || ""}
+                  onChange={(e) => {
+                    if (connectionInfo) {
+                      setConnectionInfo({ ...connectionInfo, apSsid: e.target.value })
+                    }
+                    } 
+                  }
+                />
                 </div>
                 <div className="flex flex-row items-center justify-center">
                   <label
@@ -137,29 +198,43 @@ function Home() {
                     )} text-2xl font-bold text-center`}
                     >
                     AP Password: 
-                  </label>
+                </label>
+                <input
+                  className={`${selectThemeClass(
+                    "bg-gray-300 text-black",
+                    "bg-gray-700 text-white"
+                  )} rounded-xl ml-2 text-center`}
+                  type="text"
+                  name="apPassword"
+                  id="apPassword"
+                  value={connectionInfo?.apPassword || ""}
+                  onChange={(e) => {
+                    if (connectionInfo) {
+                      setConnectionInfo({ ...connectionInfo, apPassword: e.target.value })
+                    }
+                    } 
+                  }
+                />
                 </div>
               </div>
               <div className="flex flex-row justify-around items-center mb-10 mt-5">
                 <button
-                  onClick={() => {}}
+                  onClick={handleRestore}
                   className={`flex flex-row items-center justify-center bg-red-500 h-16 w-16 rounded-full p-2 mx-2`}
                 >
-                  <MaterialCommunityIcons
-                    name={IconType.Restore}
-                    color={selectThemeClass("#000", "#fff")}
-                    size={40}
-                  ></MaterialCommunityIcons>
+                  <MdRestore
+                    fill={selectThemeClass("#000", "#fff")}
+                    fontSize={35}
+                  ></MdRestore>
                 </button>
                 <button
-                  onClick={() => {}}
+                  onClick={saveConnectionInfo}
                   className={`flex flex-row items-center justify-center bg-green-500 h-16 w-16 rounded-full p-2 mx-2`}
                   >
-                  <MaterialCommunityIcons
-                    name={IconType.Save}
-                    color={selectThemeClass("#000", "#fff")}
-                    size={40}
-                  ></MaterialCommunityIcons>
+                    <MdSave
+                      fill={selectThemeClass("#000", "#fff")}
+                      fontSize={35}
+                    ></MdSave>
                 </button>
               </div>
             </div>
@@ -168,12 +243,15 @@ function Home() {
               <GoToButton
                 fnGoTo={handleGoToSettings}
                 goToSectionTitle="Configuracion"
-                icon={IconType.Next}
-                classnames="text-2xl mr-2"
+                icon={<MdSettings
+                  fill={selectThemeClass("#000", "#fff")}
+                  size={30}
+                ></MdSettings>}
+                classnames="text-2xl ml-2 font-bold"
                 classnamesContainer={`${selectThemeClass(
                   "bg-gray-100 text-black",
                   "bg-gray-900 text-white"
-                )} px-5`}
+                )} px-5 flex-row`}
               ></GoToButton>
             </div>
           </div>

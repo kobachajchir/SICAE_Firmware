@@ -9,6 +9,10 @@ export class WebSocketRepository {
       this.gateway = gateway;
     }
   
+    public getGateway() {
+      return this.gateway;
+    }
+
     public initWebSocket() {
       console.log('Trying to open a WebSocket connection...');
       this.websocket = new WebSocket(this.gateway);

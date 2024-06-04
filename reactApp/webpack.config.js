@@ -1,12 +1,14 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
+const BundleAnalyzerPlugin =
+  require("webpack-bundle-analyzer").BundleAnalyzerPlugin
 const path = require("path");
 
 module.exports = {
-  entry: "./reactApp/index.tsx",
+  entry: "./index.tsx",
   output: {
     filename: "bundle.js",
-    path: path.resolve(__dirname, "data"),
+    path: path.resolve(__dirname, "../data"),
     publicPath: "/", // Importante para React Router
   },
   optimization: {
@@ -21,7 +23,7 @@ module.exports = {
   },
   devServer: {
     static: {
-      directory: path.resolve(__dirname, "data"),
+      directory: path.resolve(__dirname, "../data"),
     },
     port: 3000,
     open: true,
@@ -33,7 +35,7 @@ module.exports = {
     rules: [
       {
         test: /\.css$/i,
-        include: path.resolve(__dirname, "reactApp"),
+        include: path.resolve(__dirname, "./"),
         use: ["style-loader", "css-loader", "postcss-loader"],
       },
       {
@@ -44,7 +46,11 @@ module.exports = {
       {
         test: /\.ttf$/,
         loader: "url-loader",
-        include: path.resolve(__dirname, "node_modules/react-web-vector-icons"),
+        include: path.resolve(__dirname, "node_modules/@react-icons/all-files"),
+        options: {
+          limit: 10000,
+          name: "fonts/[name].[ext]",
+        },
       },
       {
         test: /\.(jpe?g|png|gif|svg)$/i,
@@ -54,7 +60,8 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: "./data/index.html",
+      template: "./../data/index.html",
     }),
+    //new BundleAnalyzerPlugin(),
   ],
 };

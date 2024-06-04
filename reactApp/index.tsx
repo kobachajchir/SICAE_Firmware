@@ -9,8 +9,6 @@ import Settings from "./screens/Settings";
 import Footer from "./components/Footer";
 import { UserProvider, useUser } from "./hooks/UserContext";
 import Login from "./screens/Login";
-import { WebSocketProvider } from "./hooks/WebSocketContext";
-require("react-web-vector-icons/fonts");
 
 /*
             {user && (
@@ -46,11 +44,9 @@ const container = document.getElementById("root");
 const root = createRoot(container!); // Utiliza createRoot en lugar de ReactDOM.render
 
 root.render(
-  <WebSocketProvider>
-    <UserProvider>
+  <UserProvider>
       <Index />
     </UserProvider>
-  </WebSocketProvider>
 );
 
 export default Index;

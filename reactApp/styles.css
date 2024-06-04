@@ -3,20 +3,10 @@
   width: 100vw;
 }
 
+.react-icons {
+  vertical-align: middle;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@font-face {
-  font-family: "MaterialCommunityIcons";
-  font-style: normal;
-  font-weight: 400;
-  src: url("fonts/MaterialCommunityIcons.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: "MaterialIcons";
-  font-style: normal;
-  font-weight: 400;
-  src: url("fonts/MaterialIcons.ttf") format("truetype");
-}

@@ -1,13 +1,12 @@
 import React from "react";
-//@ts-ignore
-import { MaterialCommunityIcons } from "react-web-vector-icons";
 import { IconType } from "../types/IconTypes";
 import { useTheme } from "../hooks/ThemeContext";
+import { MdAccountCircle } from "react-icons/md";
 
 interface GoToButtonProps {
   fnGoTo: () => void;
   goToSectionTitle: string;
-  icon: string;
+  icon: any;
   classnames?: string;
   classnamesContainer?: string;
 }
@@ -24,15 +23,9 @@ function GoToButton({
   return (
     <button
       onClick={fnGoTo}
-      className={`flex ${
-        icon === IconType.Back ? "flex-row" : "flex-row-reverse"
-      } ${classnamesContainer} items-center justify-center bg-gray-100 h-min rounded-xl p-2`}
+      className={`flex ${classnamesContainer} items-center justify-center bg-gray-100 h-min rounded-xl p-2`}
     >
-      <MaterialCommunityIcons
-        name={icon}
-        color={selectThemeClass("#000", "#fff")}
-        size={40}
-      ></MaterialCommunityIcons>
+            {icon}
       <p className={classnames}> Ir a {goToSectionTitle}</p>
     </button>
   );

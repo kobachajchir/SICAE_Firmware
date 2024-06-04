@@ -2,13 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../hooks/ThemeContext";
 import GoToButton from "../components/GoToButton";
-import { IconType } from "../types/IconTypes";
 import { SystemInfo } from "../types/APITypes";
-//@ts-ignore
-import { MaterialCommunityIcons } from "react-web-vector-icons";
 import { fetchSystemInfo } from "../tools/api";
 import ToggleButton from "../components/toggleButton";
-import { useWebSocket } from "../hooks/WebSocketContext";
+import { MdCloudDownload, MdHome } from "react-icons/md";
+
 
 function Settings() {
   const [systemInfo, setSystemInfo] = useState<
@@ -16,15 +14,9 @@ function Settings() {
   >(null);
   const { isDarkMode, selectThemeClass, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const websocketRepo = useWebSocket();
 
   async function getData() {
     console.log("get data");
-    websocketRepo.setOnMessageCallback((event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      setSystemInfo(data);
-    });
-    websocketRepo.sendMessage('fetchSystemInfo'); // Enviar el mensaje para obtener la información del sistema
   }
 
   useEffect(() => {
@@ -63,12 +55,15 @@ function Settings() {
         <GoToButton
           goToSectionTitle={"Inicio"}
           fnGoTo={handleGoToHome}
-          icon={IconType.Back}
+          icon={<MdHome
+            fill={selectThemeClass("#000", "#fff")}
+            size={35}
+          ></MdHome>}
           classnames="ml-2"
           classnamesContainer={`absolute left-0 ml-4 ${selectThemeClass(
             "bg-gray-200 text-black",
             "bg-gray-700 text-white"
-          )}`}
+          )} flex-row align-center items-center justify-center`}
         ></GoToButton>
         <span
           className={`${selectThemeClass(
@@ -115,15 +110,14 @@ function Settings() {
           </div>
           <button
             onClick={getData}
-            className={`flex flex-row items-center justify-center bg-green-400 h-min rounded-xl px-2 my-2`}
+            className={`flex flex-row items-center justify-center bg-green-400 h-min rounded-xl px-4 my-2`}
           >
-            <MaterialCommunityIcons
-              name={IconType.Server}
-              color={selectThemeClass("#000", "#fff")}
-              size={40}
-            ></MaterialCommunityIcons>
+            <MdCloudDownload
+              fill={selectThemeClass("#000", "#fff")}
+              fontSize={45}
+            ></MdCloudDownload>
             <p
-              className={`text-lg ml-1 ${selectThemeClass(
+              className={`text-2xl ml-2 ${selectThemeClass(
                 "text-black",
                 "text-white"
               )}`}

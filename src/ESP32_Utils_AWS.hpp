@@ -1,6 +1,9 @@
 #pragma once
 #include "Globals.h"
 #include "LCDControl.hpp"
+#include "webSockets.hpp"
+
+AsyncWebSocket ws("/ws");
 
 void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){ 
   if(type == WS_EVT_CONNECT){
@@ -64,8 +67,9 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 }
 
 void InitWebSockets()
-{
+{ /*
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
   Serial.println("WebSocket server started");
+*/
 }
