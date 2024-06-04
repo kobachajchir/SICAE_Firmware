@@ -8,6 +8,7 @@ import { SystemInfo } from "../types/APITypes";
 import { MaterialCommunityIcons } from "react-web-vector-icons";
 import { fetchSystemInfo } from "../tools/api";
 import ToggleButton from "../components/toggleButton";
+import { useWebSocket } from "../hooks/WebSocketContext";
 
 function Settings() {
   const [systemInfo, setSystemInfo] = useState<
@@ -15,11 +16,15 @@ function Settings() {
   >(null);
   const { isDarkMode, selectThemeClass, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const websocketRepo = useWebSocket();
 
   async function getData() {
-    /*console.log("get data");
-    const data = await fetchSystemInfo();
-    setSystemInfo(data);*/
+    console.log("get data");
+    websocketRepo.setOnMessageCallback((event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      setSystemInfo(data);
+    });
+    websocketRepo.sendMessage('fetchSystemInfo'); // Enviar el mensaje para obtener la información del sistema
   }
 
   useEffect(() => {
@@ -31,6 +36,10 @@ function Settings() {
   function handleGoToHome() {
     navigate("/");
   }
+
+  /*if (!systemInfo) {
+    return <p>Loading...</p>
+  }*/
 
   return (
     <div

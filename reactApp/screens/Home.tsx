@@ -6,15 +6,27 @@ import GoToButton from "../components/GoToButton";
 import { IconType } from "../types/IconTypes";
 //@ts-ignore
 import { MaterialCommunityIcons } from "react-web-vector-icons";
+import { useWebSocket } from "../hooks/WebSocketContext";
 
 function Home() {
   const [connectionInfo, setconnectionInfo] = useState<ConnectionInfo | null>(null);
   const [loaded, setLoaded] = useState<boolean>(false);
   const { selectThemeClass } = useTheme();
   const navigate = useNavigate();
+  const websocketRepo = useWebSocket();
+
+  async function getConnectionInfo() {
+    console.log("get connection info");
+    websocketRepo.setOnMessageCallback((event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      setconnectionInfo(data);
+    });
+    websocketRepo.sendMessage('fetchConnectionInfo'); // Enviar el mensaje para obtener la información de conexión
+  }
 
   useEffect(() => {
-    //Call API to get connection Info
+    // Call API to get connection Info
+    getConnectionInfo();
   }, []);
 
   useEffect(() => {

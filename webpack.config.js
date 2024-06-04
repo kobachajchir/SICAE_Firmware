@@ -1,4 +1,5 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
 const path = require("path");
 
 module.exports = {
@@ -7,6 +8,10 @@ module.exports = {
     filename: "bundle.js",
     path: path.resolve(__dirname, "data"),
     publicPath: "/", // Importante para React Router
+  },
+  optimization: {
+    minimize: true,
+    minimizer: [new TerserPlugin()],
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js", ".css"],
