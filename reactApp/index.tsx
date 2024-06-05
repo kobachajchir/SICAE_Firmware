@@ -14,7 +14,6 @@ import Login from "./screens/Login";
             {user && (
               <>
                 <Route path="/home" element={<Home />} />
-                <Route path="/enchufe/:id" element={<EnchufeDetail />} />
                 <Route path="/settings" element={<Settings />} />
               </>
             )}

@@ -11,6 +11,7 @@
 #define LCDCLEARTIME 500
 #define BTN_PRESS_TIME 30
 
+#define PIN_LDR 39
 #define PIN_IR_RECEIVER 18
 #define PIN_IR 19
 #define PIN_BTN_ENTER 39
@@ -33,6 +34,10 @@
 #define BTN_DOWN_RELEASED btnFlag.bits.bit3 //Button Down released
 #define BTN_ENTER_PRESSED btnFlag.bits.bit4 //Button OK/Back pressed
 #define BTN_ENTER_RELEASED btnFlag.bits.bit5 //Button OK/Back released
+#define OVERRIDE_FIREBASE_DB btnFlag.bits.bit6 //uses set instead of updateNode to override the entry on the db
+
+#define READ_IR_CODE eventFlag.bits.bit0 //Sent from Web App
+#define PLAY_IR_CODE eventFlag.bits.bit1 //Play a IR Code
 
 //MODES DEFINITIONS
 #define HOME 0 //Home screen

@@ -43,6 +43,7 @@ String uid;
 String path = "/dispositivos/";
 String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
 String firmware = "0.1";
+String salaName = "Sala Piloto";
 String ssidAP;
 String apPassword;
 String wifiSsid;
@@ -51,9 +52,12 @@ String apiKey;
 String databaseUrl;
 String userEmail;
 String userPassword;
+const char* ntpServer = "pool.ntp.org";
+int timestamp;
 
 myByte flag;
 myByte btnFlag;
+myByte eventFlag;
 
 uint32_t lastTime = 0;
 uint32_t sendDataPrevMillis = 0;
@@ -72,9 +76,110 @@ uint32_t btnEnterDuration = 0;
 uint32_t btnUpDuration = 0;
 uint32_t btnDownDuration = 0;
 
+String relayPath; // TEST
+
 // Declaraciones de funciones
 void updateFirebaseEntry(FirebaseJson& content);
 void readConfigFile();
+unsigned long getTime();
+void addOrUpdateDataEntry(FirebaseJson &content);
+int getDataEntryCount(FirebaseJson &content);
+void streamTimeoutCallback(bool timeout);
+void streamCallback(FirebaseStream data);
+
+void streamCallback(FirebaseStream data) {
+  Serial.println("Stream data received:");
+  Serial.println(data.stringData());
+  if (data.dataTypeEnum() == fb_esp_rtdb_data_type_boolean) {
+    bool relayState = data.boolData();
+    Serial.print("Relay state updated to: ");
+    Serial.println(relayState ? "ON" : "OFF");
+    if (relayState) {
+      digitalWrite(PIN_RELE_UNO, HIGH);
+    } else {
+      digitalWrite(PIN_RELE_UNO, LOW);
+    }
+  }
+}
+
+void streamTimeoutCallback(bool timeout) {
+  if (timeout) {
+    Serial.println("Stream timeout, resuming...");
+    if (!Firebase.RTDB.beginStream(&fbdo, relayPath.c_str())) {
+      Serial.printf("Stream resume error, %s\n", fbdo.errorReason().c_str());
+    }
+  }
+}
+
+
+int getDataEntryCount(FirebaseJson &content) {
+  FirebaseJsonData jsonData;
+  FirebaseJsonArray jsonArray;
+  int dataCount = 0;
+  if (content.get(jsonData, "data") && jsonData.type == "array") {
+    jsonData.getArray(jsonArray);
+    dataCount = jsonArray.size();
+  }
+  return dataCount;
+}
+
+void addOrUpdateDataEntry(FirebaseJson &content) {
+  FirebaseJsonData jsonData;
+  if (content.get(jsonData, "data")) {
+    FirebaseJsonArray jsonArray;
+    jsonData.getArray(jsonArray);
+    int index = jsonArray.size();
+
+    FirebaseJson data;
+    FirebaseJson irData;
+    irData.set("up", "");
+    irData.set("down", "");
+    irData.set("power", "");
+
+    data.set("deviceType", "");
+    data.set("icon", "");
+    data.set("irData", irData);
+    data.set("model", "");
+    data.set("name", "");
+    data.set("state", false);
+
+    // Add new data entry
+    char dataPath[20];
+    sprintf(dataPath, "data/%d", index);
+    content.set(dataPath, data);
+
+  } else {
+    // Create new data array and add first entry
+    FirebaseJsonArray dataArray;
+    FirebaseJson data;
+    FirebaseJson irData;
+    irData.set("up", "");
+    irData.set("down", "");
+    irData.set("power", "");
+
+    data.set("deviceType", "");
+    data.set("icon", "");
+    data.set("irData", irData);
+    data.set("model", "");
+    data.set("name", "");
+    data.set("state", false);
+
+    dataArray.add(data);
+    content.set("data", dataArray);
+  }
+}
+
+// Function that gets current epoch time
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    //Serial.println("Failed to obtain time");
+    return(0);
+  }
+  time(&now);
+  return now;
+}
 
 void updateFirebaseEntry(FirebaseJson& content) {
   Serial.print("Updating node at path: ");
@@ -139,8 +244,7 @@ void setup() {
   pinMode(PIN_RELE_UNO, OUTPUT);
   digitalWrite(PIN_RELE_UNO, LOW);
   Serial.begin(115200);
-    // set up the LCD's number of rows and columns:
-      // Inicializa LittleFS
+  configTime(0, 0, ntpServer);
   initFS();
   bool fileexists = LittleFS.exists("/config.txt");
   if (!fileexists) {
@@ -249,13 +353,22 @@ void setup() {
 	InitWebSockets();
   READ_FROM_FIREBASE = 1;
   IrReceiver.begin(PIN_IR_RECEIVER, ENABLE_LED_FEEDBACK);
+  // Listen for changes to the relay state
+  relayPath = path;
+  relayPath += "/data/0/state";
+  Firebase.RTDB.setStreamCallback(&fbdo, streamCallback, streamTimeoutCallback);
+  if (!Firebase.RTDB.beginStream(&fbdo, relayPath.c_str())) {
+    Serial.printf("Stream begin error, %s\n", fbdo.errorReason().c_str());
+  }
 }
 
 void loop() {
-  if(IrReceiver.decode()){
-    Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-    IrReceiver.printIRResultShort(&Serial);
-    IrReceiver.resume();
+  if(READ_IR_CODE){
+    if(IrReceiver.decode()){
+      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+      IrReceiver.printIRResultShort(&Serial);
+      IrReceiver.resume();
+    }
   }
   if((millis()-lastTime) > MINMSTIME){
     lastTime = millis();
@@ -290,7 +403,7 @@ void loop() {
         if((millis() - btnEnterDuration) >= BTN_PRESS_TIME){
           Serial.print("Btn enter detected");
           BTN_ENTER_RELEASED = 1;
-          CHANGE_RELE_STATE = 1;
+          CHANGE_RELE_STATE = 1; //!TEST!
         }else{
           BTN_ENTER_PRESSED = 0;
           BTN_ENTER_RELEASED = 0;
@@ -327,17 +440,26 @@ void loop() {
         }
     }
   }
-  if(Firebase.ready()){
-    if((millis() - sendDataPrevMillis)>FIREBASE_UPDATE_TIME) { //Every 30sec TEST ONLY
+
+  if (Firebase.ready()) {
+    if ((millis() - sendDataPrevMillis) > FIREBASE_UPDATE_TIME) { // Every 30sec TEST ONLY
       WRITE_TO_FIREBASE = 1;
+      OVERRIDE_FIREBASE_DB = 0;
     }
-    if(READ_FROM_FIREBASE){
+
+    if (READ_FROM_FIREBASE) {
       READ_FROM_FIREBASE = 0;
       if (Firebase.RTDB.getJSON(&fbdo, path.c_str())) {
         if (fbdo.dataType() == "json") {
           FirebaseJson &currentData = fbdo.jsonObject();
-          String currentIp, currentFirmware, currentWifiName;
+          String currentIp, currentFirmware, currentWifiName, SalaNameJson;
           bool currentOnline;
+
+          if (currentData.get(jsonData, "salaName") && jsonData.type == "string") {
+            SalaNameJson = jsonData.stringValue;
+          } else {
+            SalaNameJson = "";
+          }
 
           if (currentData.get(jsonData, "currentIp") && jsonData.type == "string") {
             currentIp = jsonData.stringValue;
@@ -364,69 +486,66 @@ void loop() {
           }
 
           // Comparar y actualizar solo si es necesario
-          if (currentIp != WiFi.localIP().toString()){
+          if (SalaNameJson != salaName) {
+            content.set("salaName", salaName);
+            WRITE_TO_FIREBASE = 1;
+            OVERRIDE_FIREBASE_DB = 0;
+          }
+          if (currentIp != WiFi.localIP().toString()) {
             content.set("currentIp", WiFi.localIP().toString());
             WRITE_TO_FIREBASE = 1;
+            OVERRIDE_FIREBASE_DB = 0;
           }
-          if (currentFirmware != firmware){
+          if (currentFirmware != firmware) {
             content.set("firmware", firmware);
             WRITE_TO_FIREBASE = 1;
+            OVERRIDE_FIREBASE_DB = 0;
           }
-          if (currentWifiName != WIFI_SSID){
+          if (currentWifiName != WIFI_SSID) {
             content.set("wifiName", WIFI_SSID);
             WRITE_TO_FIREBASE = 1;
+            OVERRIDE_FIREBASE_DB = 0;
           }
-          if (currentOnline != true){
+          if (currentOnline != true) {
             content.set("online", true);
             WRITE_TO_FIREBASE = 1;
-          } 
-        } else {
-          Serial.println("Creating new ESP32 File on DB");
-          content.set("currentIp", WiFi.localIP().toString());
-          content.set("firmware", firmware);
-          content.set("online", true);
-          content.set("salaName", "Sala 1");
-          content.set("wifiName", WIFI_SSID);
-          content.set("apMode", flag.bits.bit0);
-          content.set("apSSID", ssidAP);
-
-          FirebaseJson data;
-          FirebaseJson irData;
-          irData.set("up", "");
-          irData.set("down", "");
-          irData.set("power", "");
-
-          data.set("deviceType", "");
-          data.set("icon", "");
-          data.set("irData", irData);
-          data.set("model", "");
-          data.set("name", "");
-          data.set("state", false);
-
-          content.set("data/[0]", data); //Here is not 0 fixed, is the number it corresponds to the amount of data items in the content 
-          WRITE_TO_FIREBASE = 1;
+            OVERRIDE_FIREBASE_DB = 0;
+          }
         }
       } else {
-        Serial.println(fbdo.errorReason());
+        addOrUpdateDataEntry(content);
+        WRITE_TO_FIREBASE = 1;
+        OVERRIDE_FIREBASE_DB = 1;
       }
     }
-    if(WRITE_TO_FIREBASE){
+
+    if (WRITE_TO_FIREBASE) {
       WRITE_TO_FIREBASE = 0;
       sendDataPrevMillis = millis();
       strcpy(linea, "Subiendo data");
       imprimirLCD(linea, 0);
       strcpy(linea, "");
       imprimirLCD(linea, 1);
-      if (Firebase.RTDB.set(&fbdo, path.c_str(), &content)) {
-        Serial.println("Initial data sent to Firebase");
-        UPDATED = 1;
+      if (OVERRIDE_FIREBASE_DB) {
+        OVERRIDE_FIREBASE_DB = 0;
+        if (Firebase.RTDB.set(&fbdo, path.c_str(), &content)) {
+          Serial.println("Overrride data sent to Firebase");
+          UPDATED = 1;
+        } else {
+          Serial.print("Set request failed: ");
+          Serial.println(fbdo.errorReason());
+        }
       } else {
-        Serial.print("Set request failed: ");
-        Serial.println(fbdo.errorReason());
+        if (Firebase.RTDB.updateNode(&fbdo, path.c_str(), &content)) {
+          Serial.println("Update data sent to Firebase");
+          UPDATED = 1;
+        } else {
+          Serial.print("Set request failed: ");
+          Serial.println(fbdo.errorReason());
+        }
       }
     }
   }
-
   if (Firebase.isTokenExpired()) {
     Firebase.refreshToken(&config);
     Serial.println("Refresh token");
@@ -441,3 +560,4 @@ void loop() {
 
   ws.cleanupClients();
 }
+
