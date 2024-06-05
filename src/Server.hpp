@@ -68,21 +68,57 @@ void InitServer() {
   });
 
   // Ruta para actualizar la información de conexión
-  server.on("/connectionInfo", HTTP_POST, [](AsyncWebServerRequest *request){
-    if (request->hasParam("wifiSsid", true) && request->hasParam("wifiPassword", true) &&
-        request->hasParam("apSsid", true) && request->hasParam("apPassword", true) &&
-        request->hasParam("apMode", true)) {
-      connectionInfo.wifiSsid = request->getParam("wifiSsid", true)->value();
-      connectionInfo.wifiPassword = request->getParam("wifiPassword", true)->value();
-      connectionInfo.apSsid = request->getParam("apSsid", true)->value();
-      connectionInfo.apPassword = request->getParam("apPassword", true)->value();
-      connectionInfo.apMode = request->getParam("apMode", true)->value().equalsIgnoreCase("true");
+  server.on("/connectionInfo", HTTP_POST, [](AsyncWebServerRequest *request) {
+  // Leer el cuerpo de la solicitud
+  AsyncWebServerResponse *response = request->beginResponseStream("application/json");
+  DynamicJsonDocument doc(1024);
 
-      request->send(200, "text/plain", "Connection info updated");
-    } else {
-      request->send(400, "text/plain", "Bad Request");
+  if (request->hasParam("plain", true)) {
+    String body = request->getParam("plain", true)->value();
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      request->send(400, "application/json", "{\"message\":\"Invalid JSON\"}");
+      return;
     }
-  });
+
+    if (doc.containsKey("wifiSsid") && doc.containsKey("wifiPassword") &&
+        doc.containsKey("apSsid") && doc.containsKey("apPassword") &&
+        doc.containsKey("apMode")) {
+
+      connectionInfo.wifiSsid = doc["wifiSsid"].as<String>();
+      connectionInfo.wifiPassword = doc["wifiPassword"].as<String>();
+      connectionInfo.apSsid = doc["apSsid"].as<String>();
+      connectionInfo.apPassword = doc["apPassword"].as<String>();
+      connectionInfo.apMode = doc["apMode"].as<bool>();
+
+      FLAG_UPDATE_CONFIG = 1;
+      request->send(200, "application/json", "{\"message\":\"Connection info updated\"}");
+
+      Serial.println("Received request:");
+      Serial.print("wifiSsid: ");
+      Serial.println(connectionInfo.wifiSsid);
+      Serial.print("wifiPassword: ");
+      Serial.println(connectionInfo.wifiPassword);
+      Serial.print("apSsid: ");
+      Serial.println(connectionInfo.apSsid);
+      Serial.print("apPassword: ");
+      Serial.println(connectionInfo.apPassword);
+      Serial.print("apMode: ");
+      Serial.println(connectionInfo.apMode ? "true" : "false");
+
+    } else {
+      request->send(400, "application/json", "{\"message\":\"Missing parameters\"}");
+    }
+  } else {
+    request->send(400, "application/json", "{\"message\":\"Missing body\"}");
+  }
+});
+
+
+
 
   server.onNotFound(notFound);
 

@@ -35,6 +35,7 @@
 #define BTN_ENTER_PRESSED btnFlag.bits.bit4 //Button OK/Back pressed
 #define BTN_ENTER_RELEASED btnFlag.bits.bit5 //Button OK/Back released
 #define OVERRIDE_FIREBASE_DB btnFlag.bits.bit6 //uses set instead of updateNode to override the entry on the db
+#define FLAG_UPDATE_CONFIG btnFlag.bits.bit7 //uses set instead of updateNode to override the entry on the db
 
 #define READ_IR_CODE eventFlag.bits.bit0 //Sent from Web App
 #define PLAY_IR_CODE eventFlag.bits.bit1 //Play a IR Code

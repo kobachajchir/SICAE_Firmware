@@ -22,16 +22,22 @@ function Home() {
   }
 
   async function saveConnectionInfo() {
-    console.log("saveConnectionInfo")
+    console.log("saveConnectionInfo");
     if (connectionInfo) {
       try {
-        await updateConnectionData(connectionInfo);
-        console.log("Connection info updated successfully");
+        console.log("Datos a enviar:", connectionInfo);
+        const success = await updateConnectionData(connectionInfo);
+        if (success) {
+          console.log("Connection info updated successfully");
+        } else {
+          console.error("Error updating connection info");
+        }
       } catch (error) {
         console.error("Error updating connection info:", error);
       }
     }
   }
+  
 
   function handleRestore() {
     console.log("handleRestore")

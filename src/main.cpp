@@ -558,6 +558,57 @@ void loop() {
     Serial.println(digitalRead(PIN_RELE_UNO) ? "ON" : "OFF");
   }
 
+  if (FLAG_UPDATE_CONFIG) {
+    // Crear objeto JSON
+    DynamicJsonDocument doc(2048);
+    Serial.println("Guardando SSID: ");
+    Serial.print(connectionInfo.wifiSsid);
+    doc["ssid"] = connectionInfo.wifiSsid;
+
+    Serial.println("Guardando Password: ");
+    Serial.print(connectionInfo.wifiPassword);
+    doc["password"] = connectionInfo.wifiPassword;
+
+    Serial.println("Guardando AP SSID: ");
+    Serial.println(connectionInfo.apSsid);
+    doc["apSsid"] = connectionInfo.apSsid;
+
+    Serial.println("Guardando AP Password: ");
+    Serial.print(connectionInfo.apPassword);
+    doc["apPassword"] = connectionInfo.apPassword;
+    doc["userEmail"] = "koba@test.com";  // Puedes actualizar estos valores según sea necesario
+    doc["userPassword"] = "koba1254";
+    doc["databaseUrl"] = "https://sicaewebapp-default-rtdb.firebaseio.com/";
+    doc["appKey"] = "AIzaSyAX0p4VIdtfN7I7dnaOGpBtfGAtlG3IqDY";
+
+    JsonObject data0 = doc.createNestedObject("data[0]");
+    data0["deviceType"] = "";
+    data0["icon"] = "";
+    JsonObject irData = data0.createNestedObject("irData");
+    irData["down"] = "";
+    irData["power"] = "";
+    irData["up"] = "";
+    data0["model"] = "";
+    data0["name"] = "";
+    data0["state"] = false;
+
+    // Convertir JSON a cadena
+    String jsonString;
+    serializeJson(doc, jsonString);
+
+    // Escribir JSON en el archivo
+    File file = LittleFS.open("/config.txt", "w");
+    if (file) {
+      file.print(jsonString);
+      file.close();
+    }
+
+    // Reiniciar la bandera
+    FLAG_UPDATE_CONFIG = 0;
+
+    Serial.println("Configuration updated and saved to file.");
+  }
+
   ws.cleanupClients();
 }
 

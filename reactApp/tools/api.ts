@@ -19,6 +19,7 @@ export async function login(data: UserInfo): Promise<UserInfo> {
     },
     body: JSON.stringify(data),
   });
+  
 
   if (!response.ok) {
     throw new Error("Usuario o contraseña incorrectos");
@@ -28,19 +29,20 @@ export async function login(data: UserInfo): Promise<UserInfo> {
 }
 
 export async function updateConnectionData(data: ConnectionInfo): Promise<boolean> {
-  const response = await fetch(`${BASE_URL}/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  const result = await response.json();
-  if (result.status !== 200) {
-    throw new Error("Error in response: " + result.message);
+  try {
+    const result = await fetchAPI(`/connectionInfo`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    console.log("Response successful");
+    return true; // Devuelve true si la respuesta es 200 OK
+  } catch (error) {
+    console.error("Error in response:", error);
+    return false; // Devuelve false si hubo un error
   }
-  return response.ok; // Devuelve true si la respuesta es 200 OK
 }
 
 export async function fetchSystemInfo(): Promise<SystemInfo> {
